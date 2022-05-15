@@ -14,6 +14,23 @@ export default function handleRequest(
 
   responseHeaders.set("Content-Type", "text/html");
 
+  // Add Link header for HTTP/2 Server Push
+  let http2PushLinksHeaders = remixContext.matches
+    .flatMap(({ route: { module, imports } }) => [module, ...(imports || [])])
+    .filter(Boolean)
+    .concat([
+      remixContext.manifest.url,
+      remixContext.manifest.entry.module,
+      ...remixContext.manifest.entry.imports,
+    ]);
+  responseHeaders.set(
+    "Link",
+    http2PushLinksHeaders
+      .map((link: string) => `<${link}>; rel=preload; as=script; crossorigin=anonymous`)
+      .concat(responseHeaders.get("Link") as string)
+      .filter(Boolean)
+      .join(",")
+  );
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
     headers: responseHeaders,
